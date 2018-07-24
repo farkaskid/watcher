@@ -5,8 +5,22 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strings"
+	"watcher/icmp"
+	"watcher/tcp"
 )
+
+func handleProto(proto string, bytes []byte) string {
+	switch proto {
+	case "tcp":
+		packet := tcp.NewPacket(bytes)
+		return packet.String()
+	case "icmp":
+		packet := icmp.NewPacket(bytes)
+		return packet.String()
+	}
+
+	return proto + " packet"
+}
 
 func main() {
 	protocol := flag.String("proto", "tcp", "the protocol to listen to.")
@@ -17,7 +31,6 @@ func main() {
 		log.Panicln(err)
 	}
 
-	protoname := strings.ToUpper(*protocol)
 	buf := make([]byte, 2048)
 	for {
 		count, ip, err := conn.ReadFrom(buf)
@@ -26,11 +39,12 @@ func main() {
 		}
 
 		domains, err := net.LookupAddr(ip.String())
+		packetDes := handleProto(*protocol, buf)
 		if err != nil {
-			fmt.Println(protoname, "packet from IP:", ip, "with", count, "bytes")
+			fmt.Println(packetDes, "from IP:", ip, "with", count, "bytes")
 			continue
 		}
 
-		fmt.Println(protoname, "packet from domain:", domains, "with", count, "bytes")
+		fmt.Println(packetDes, "from domain:", domains[0], "with", count, "bytes")
 	}
 }
